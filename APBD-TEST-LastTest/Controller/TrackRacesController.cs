@@ -39,7 +39,9 @@ public class TrackRacesController : ControllerBase
             await _dbService.AddParticipations(addParticipationsDto);
             return Created("api/track-races", new
             {
-                
+                RaceName = addParticipationsDto.RaceName,
+                TrackName = addParticipationsDto.TrackName,
+                Participations = addParticipationsDto.Participations
             });;
         }
         catch (NotFoundException ex)
