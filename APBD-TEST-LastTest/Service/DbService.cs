@@ -1,6 +1,7 @@
 using APBD_TEST_LastTest.Data;
 using APBD_TEST_LastTest.DTOs;
 using APBD_TEST_LastTest.Exceptions;
+using APBD_TEST_LastTest.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace APBD_TEST_LastTest.Service;
@@ -58,5 +59,70 @@ public class DbService : IDbService
         }
         
         return participations;
+    }
+
+    public async Task AddParticipations(AddParticipationsDTO addParticipationsDto)
+    {
+        var transaction = await _context.Database.BeginTransactionAsync();
+
+        try
+        {
+            var race = await _context.Races.FirstOrDefaultAsync(r => r.Name == addParticipationsDto.RaceName);
+            if (race == null)
+            {
+                throw new NotFoundException("Race not found");
+            }
+            
+            var track = await _context.Tracks.FirstOrDefaultAsync(t => t.Name == addParticipationsDto.TrackName);
+            if (track == null)
+            {
+                throw new NotFoundException("Track not found");
+            }
+            
+            var trackRace = await _context.TrackRaces.FirstOrDefaultAsync(tr => tr.TrackRaceId == track.TrackId && tr.RaceId == race.RaceId);
+            if (trackRace == null)
+            {
+                throw new NotFoundException("Race on this track not found");
+            }
+
+            foreach (var part in addParticipationsDto.Participations)
+            {
+                if (part.FinishTimeInSeconds < trackRace.BestTimeInSeconds)
+                {
+                    trackRace.BestTimeInSeconds = part.FinishTimeInSeconds;
+                    // UPdated???
+                }
+                
+                var racer = await _context.Racers.FirstOrDefaultAsync(r => r.RacerId == part.RacerId);
+                if (racer == null)
+                {
+                    throw new NotFoundException("Racer not found");
+                }
+
+                var participationAlready = await _context.RaceParticipations.FirstOrDefaultAsync(raceParticipation => raceParticipation.RacerId == racer.RacerId 
+                    && raceParticipation.TrackRaceId == trackRace.TrackRaceId);
+                if (participationAlready != null)
+                {
+                    throw new ConflictException("Participation already exists");
+                }
+
+                var participation = new RaceParticipation()
+                {
+                    TrackRaceId = trackRace.TrackRaceId,
+                    RacerId = racer.RacerId,
+                    FinishTimeInSeconds = part.FinishTimeInSeconds,
+                    Position = part.Position,
+                };
+                _context.RaceParticipations.Add(participation);
+            }
+            
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            throw ex;
+        }
     }
 }
