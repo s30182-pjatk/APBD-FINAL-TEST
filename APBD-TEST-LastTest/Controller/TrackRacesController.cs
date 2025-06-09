@@ -25,6 +25,16 @@ public class TrackRacesController : ControllerBase
             {
                 return BadRequest("Participations cannot be empty");
             }
+
+            if (addParticipationsDto.Participations.Any(part => part.Position <= 0))
+            {
+                return BadRequest("Participations cannot be 0 or negative");
+            }
+            
+            if (addParticipationsDto.Participations.Any(part => part.FinishTimeInSeconds <= 0))
+            {
+                return BadRequest("FinishTimeInSeconds cannot be 0 or negative");
+            }
             
             await _dbService.AddParticipations(addParticipationsDto);
             return NoContent();
