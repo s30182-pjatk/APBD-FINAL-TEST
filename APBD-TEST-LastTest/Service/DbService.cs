@@ -90,6 +90,7 @@ public class DbService : IDbService
                 if (part.FinishTimeInSeconds < trackRace.BestTimeInSeconds)
                 {
                     trackRace.BestTimeInSeconds = part.FinishTimeInSeconds;
+                    _context.TrackRaces.Update(trackRace);
                     // UPdated???
                 }
                 
